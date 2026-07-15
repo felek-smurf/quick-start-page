@@ -195,11 +195,11 @@ function TrackPage() {
                 onDragEnd={() => setDragging(null)}
                 onDragOver={(e) => { e.preventDefault(); }}
                 onDrop={(e) => { e.preventDefault(); if (dragging) reorder(dragging, o.view); }}
-                className={"transition " + (dragging === o.view ? "opacity-40" : "")}
+                className={"flex transition " + (dragging === o.view ? "opacity-40" : "")}
               >
                 <Link
                   {...(linkProps as any)}
-                  className="group flex items-start gap-3 rounded-lg border border-white/10 bg-white/[0.03] p-4 transition hover:-translate-y-0.5 hover:border-red-500/60 cursor-grab active:cursor-grabbing"
+                  className="group flex h-full w-full items-start gap-3 rounded-lg border border-white/10 bg-white/[0.03] p-4 transition hover:-translate-y-0.5 hover:border-red-500/60 cursor-grab active:cursor-grabbing"
                 >
                   <span className="text-2xl">{o.icon}</span>
                   <div className="flex-1">
