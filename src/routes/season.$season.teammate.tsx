@@ -58,22 +58,40 @@ function TeammatePage() {
     return () => { cancelled = true; };
   }, [seasonN]);
 
-  // Group drivers by team
+  // Count how often each driver name appears in session results (uppercased)
+  const appearanceByDriver = useMemo(() => {
+    const c: Record<string, number> = {};
+    sessions.forEach((s) => {
+      (s.results || []).forEach((r) => {
+        const n = String(r.name || "").toUpperCase().trim();
+        if (!n) return;
+        c[n] = (c[n] || 0) + 1;
+      });
+    });
+    return c;
+  }, [sessions]);
+
+  // Group drivers by team, pick the 2 who actually race (most appearances)
   const teamGroups = useMemo(() => {
     const g: Record<string, string[]> = {};
     teams.forEach((t) => {
       const team = t.team;
-      const name = String(t.driver_name).toUpperCase();
+      const name = String(t.driver_name).toUpperCase().trim();
       if (!team || !name) return;
       g[team] = g[team] || [];
       if (!g[team].includes(name)) g[team].push(name);
     });
-    // Only teams with exactly 2 drivers make a proper H2H
     return Object.entries(g)
       .filter(([, ds]) => ds.length >= 2)
-      .map(([team, ds]) => ({ team, drivers: ds.slice(0, 2) as [string, string] }))
+      .map(([team, ds]) => {
+        const sorted = [...ds].sort(
+          (x, y) => (appearanceByDriver[y] || 0) - (appearanceByDriver[x] || 0),
+        );
+        return { team, drivers: sorted.slice(0, 2) as [string, string] };
+      })
       .sort((a, b) => a.team.localeCompare(b.team));
-  }, [teams]);
+  }, [teams, appearanceByDriver]);
+
 
   return (
     <>
