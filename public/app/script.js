@@ -542,9 +542,8 @@ async function handleFileUpload(e) {
           if (trackGuess) session.track_name = trackGuess;
         }
 
-        if (category !== "Practice") {
-          sessionsToPersist.push(session);
-        }
+        // Persist every session, including Practice, so it shows up under the race weekend card
+        sessionsToPersist.push(session);
         lastProcessedSession = session;
       }
     } catch (err) {
@@ -554,20 +553,12 @@ async function handleFileUpload(e) {
 
   if (lastProcessedSession) {
     if (sessionsToPersist.length > 0) {
-      // Persist only non-Practice uploaded sessions to the database
       await saveSessions(sessionsToPersist);
-
-      // Set the view to the last uploaded session (finding the persisted version to get its database ID if applicable)
-      if (lastProcessedSession.category !== "Practice") {
-        currentData =
-          allSessions.find(
-            (s) => s.session_date === lastProcessedSession.created_at,
-          ) || lastProcessedSession;
-      } else {
-        currentData = lastProcessedSession;
-      }
+      currentData =
+        allSessions.find(
+          (s) => s.session_date === lastProcessedSession.created_at,
+        ) || lastProcessedSession;
     } else {
-      // Practice sessions are treated as temporary previews and not saved to the database
       currentData = lastProcessedSession;
     }
 

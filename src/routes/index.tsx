@@ -92,13 +92,6 @@ function MainPage() {
           <h2 className="text-sm font-bold uppercase tracking-widest text-white/60">
             Tracks · Season {season}
           </h2>
-          <Link
-            to="/season/$season/teammate"
-            params={{ season: String(season) }}
-            className="rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white hover:border-red-500/60"
-          >
-            🤝 Teammate H2H
-          </Link>
         </div>
 
         {loading && <div className="text-white/50">Loading sessions…</div>}
@@ -128,17 +121,17 @@ function MainPage() {
 function UploadPanel() {
   const src = appEmbedUrl({ season: 1, track: "", view: "upload" });
   return (
-    <div className="mb-6 rounded-lg border border-white/10 bg-white/[0.03] p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="text-xs font-bold uppercase tracking-widest text-white/60">Upload sessions</div>
-        <div className="text-[11px] text-white/40">Race + Qualifying · batch supported</div>
+    <div className="mb-6 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+      <div className="mb-1 flex items-center justify-between">
+        <div className="text-[11px] font-bold uppercase tracking-widest text-white/60">Upload sessions</div>
+        <div className="text-[10px] text-white/40">Race · Qualifying · Practice · batch</div>
       </div>
       <iframe
         title="Upload sessions"
         src={src}
         loading="lazy"
         className="w-full rounded border-0 bg-transparent"
-        style={{ height: 220 }}
+        style={{ height: 120 }}
       />
     </div>
   );
