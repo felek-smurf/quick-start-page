@@ -1,88 +1,235 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Shield, Zap } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  fetchSessions,
+  loadCachedSessions,
+  cacheIsFresh,
+  getSavedSeason,
+  setSavedSeason,
+  groupByTrack,
+  seasonStats,
+  trackFlag,
+  trackMapUrl,
+  trackSlug,
+  titleCaseTrack,
+  badgesFor,
+  appEmbedUrl,
+  type Session,
+} from "@/lib/f1-shell";
+import { ShellHeader, ShellPage } from "@/components/f1/ShellHeader";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Welcome — Get Started" },
-      { name: "description", content: "A clean, fast starting point for your next idea." },
-      { property: "og:title", content: "Welcome — Get Started" },
-      { property: "og:description", content: "A clean, fast starting point for your next idea." },
+      { title: "F1 Telemetry Analyzer" },
+      { name: "description", content: "Season standings, race stories, and telemetry from your F1 uploads." },
+      { property: "og:title", content: "F1 Telemetry Analyzer" },
+      { property: "og:description", content: "Season standings, race stories, and telemetry from your F1 uploads." },
     ],
   }),
-  component: Index,
+  component: MainPage,
 });
 
-function Index() {
+const SEASONS = Array.from({ length: 10 }, (_, i) => i + 1);
+
+function MainPage() {
+  const [season, setSeason] = useState<number>(1);
+  const cached = typeof window !== "undefined" ? loadCachedSessions() : null;
+  const [sessions, setSessions] = useState<Session[]>(cached ?? []);
+  const [loading, setLoading] = useState(!cached);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => { setSeason(getSavedSeason()); }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (cacheIsFresh() && cached) { setLoading(false); return; }
+    setLoading(sessions.length === 0);
+    fetchSessions()
+      .then((rows) => { if (!cancelled) setSessions(rows); })
+      .catch((e) => { if (!cancelled) setErr(String(e)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const seasonSessions = useMemo(
+    () => sessions.filter((s) => Number(s.season) === season),
+    [sessions, season],
+  );
+  const stats = useMemo(() => seasonStats(seasonSessions), [seasonSessions]);
+  const trackGroups = useMemo(() => groupByTrack(seasonSessions), [seasonSessions]);
+
+  const pick = (n: number) => { setSeason(n); setSavedSeason(n); };
+
   return (
-    <main className="flex min-h-screen flex-col">
-      <section className="flex flex-1 flex-col items-center justify-center px-4 py-20 text-center">
-        <div className="mb-6 inline-flex items-center justify-center rounded-full bg-secondary p-3">
-          <Sparkles className="h-6 w-6 text-primary" aria-hidden="true" />
+    <>
+      <ShellHeader crumbs={[{ label: `Season ${season}` }]} />
+      <ShellPage>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs uppercase tracking-widest text-white/50">Season</span>
+          {SEASONS.map((n) => (
+            <button
+              key={n}
+              onClick={() => pick(n)}
+              className={
+                "rounded-md border px-3 py-1.5 text-sm font-semibold transition " +
+                (season === n
+                  ? "border-red-500 bg-red-500 text-white"
+                  : "border-white/15 text-white/70 hover:border-white/40")
+              }
+            >
+              S{n}
+            </button>
+          ))}
         </div>
-        <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">
-          Your next idea starts here
-        </h1>
-        <p className="mt-6 max-w-xl text-lg text-muted-foreground">
-          A simple, modern foundation to build on. No clutter, no noise — just a clean starting point ready for what you create next.
-        </p>
-        <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-          <Button asChild size="lg">
-            <Link to="/">
-              Get started
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="lg">
-            <a href="#features">Learn more</a>
-          </Button>
-        </div>
-      </section>
 
-      <section id="features" className="border-t bg-muted/50 px-4 py-20">
-        <div className="mx-auto grid max-w-5xl gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          <FeatureCard
-            icon={<Zap className="h-5 w-5" aria-hidden="true" />}
-            title="Fast by default"
-            description="Built on a modern stack so your pages load quickly and feel snappy."
-          />
-          <FeatureCard
-            icon={<Shield className="h-5 w-5" aria-hidden="true" />}
-            title="Type-safe"
-            description="Strong typing from end to end, so refactors are easier and bugs are fewer."
-          />
-          <FeatureCard
-            icon={<Sparkles className="h-5 w-5" aria-hidden="true" />}
-            title="Ready to style"
-            description="A semantic design system means you can customize without fighting the framework."
-          />
-        </div>
-      </section>
+        <UploadPanel />
 
-      <footer className="border-t px-4 py-8 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} Your project name. Built with care.
-      </footer>
-    </main>
+        <StatsBar stats={stats} />
+
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-bold uppercase tracking-widest text-white/60">
+            Tracks · Season {season}
+          </h2>
+          <Link
+            to="/season/$season/teammate"
+            params={{ season: String(season) }}
+            className="rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white hover:border-red-500/60"
+          >
+            🤝 Teammate H2H
+          </Link>
+        </div>
+
+        {loading && <div className="text-white/50">Loading sessions…</div>}
+        {err && <div className="text-red-400">Failed to load: {err}</div>}
+        {!loading && trackGroups.length === 0 && (
+          <div className="rounded-lg border border-dashed border-white/15 p-8 text-center text-white/50">
+            No sessions uploaded for Season {season} yet. Use the upload panel above to add telemetry JSON.
+          </div>
+        )}
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {trackGroups.map((g) => (
+            <TrackCard
+              key={`${trackSlug(g.track)}::${g.category}`}
+              season={season}
+              track={g.track}
+              category={g.category}
+              sessions={g.sessions}
+            />
+          ))}
+        </div>
+      </ShellPage>
+    </>
   );
 }
 
-function FeatureCard({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
+function UploadPanel() {
+  const src = appEmbedUrl({ season: 1, track: "", view: "upload" });
   return (
-    <div className="rounded-xl border bg-card p-6 text-card-foreground shadow-sm transition-colors hover:bg-accent">
-      <div className="mb-4 inline-flex items-center justify-center rounded-lg bg-primary/10 p-2 text-primary">
-        {icon}
+    <div className="mb-6 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="text-xs font-bold uppercase tracking-widest text-white/60">Upload sessions</div>
+        <div className="text-[11px] text-white/40">Race + Qualifying · batch supported</div>
       </div>
-      <h3 className="text-lg font-semibold">{title}</h3>
-      <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+      <iframe
+        title="Upload sessions"
+        src={src}
+        loading="lazy"
+        className="w-full rounded border-0 bg-transparent"
+        style={{ height: 220 }}
+      />
     </div>
+  );
+}
+
+function StatsBar({ stats }: { stats: ReturnType<typeof seasonStats> }) {
+  const items = [
+    { label: "GP Wins", value: stats.raceWins, icon: "🏆" },
+    { label: "Sprint Wins", value: stats.sprintWins, icon: "🏁" },
+    { label: "GP Poles", value: stats.gpPoles, icon: "⏱️" },
+    { label: "Sprint Poles", value: stats.sprintPoles, icon: "⚡" },
+    { label: "Podiums", value: stats.podiums, icon: "🥂" },
+    { label: "Fastest Laps", value: stats.fastestLaps, icon: "💜" },
+  ];
+  return (
+    <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      {items.map((it) => (
+        <div key={it.label} className="rounded-md border border-white/10 bg-white/[0.03] px-3 py-3">
+          <div className="text-[10px] uppercase tracking-widest text-white/50">{it.label}</div>
+          <div className="mt-1 text-xl font-black">{it.icon} {it.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TrackCard({ season, track, category, sessions }: { season: number; track: string; category: string; sessions: Session[] }) {
+  const badgeAgg: Record<string, boolean> = {};
+  sessions.forEach((s) => {
+    const b = badgesFor(s);
+    Object.entries(b).forEach(([k, v]) => { if (v) badgeAgg[k] = true; });
+  });
+  const [imgOk, setImgOk] = useState(true);
+  const display = titleCaseTrack(track);
+  const catColor = category === "Sprint" ? "#f59e0b" : category === "Practice" ? "#64748b" : "#ef4444";
+  return (
+    <Link
+      to="/season/$season/track/$track"
+      params={{ season: String(season), track: trackSlug(track) }}
+      search={{ cat: category }}
+      className="group flex flex-col overflow-hidden rounded-lg border border-white/10 bg-white/[0.03] transition hover:-translate-y-0.5 hover:border-red-500/60"
+    >
+      <div className="relative aspect-[16/9] bg-black/40">
+        {imgOk ? (
+          <img
+            src={trackMapUrl(track)}
+            alt={display}
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-contain p-3"
+            onError={() => setImgOk(false)}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-4xl opacity-40">{trackFlag(track)}</div>
+        )}
+        <div className="absolute right-2 top-2 flex flex-wrap gap-1">
+          {badgeAgg.gs && <Tag color="#c084fc">GS</Tag>}
+          {badgeAgg.win && <Tag color="#ffd700">W</Tag>}
+          {badgeAgg.pole && <Tag color="#5ad1ff">P</Tag>}
+          {badgeAgg.fl && <Tag color="#a855f7">FL</Tag>}
+          {!badgeAgg.win && badgeAgg.podium && <Tag color="#cd7f32">P3</Tag>}
+        </div>
+      </div>
+      <div className="flex flex-1 flex-col gap-2 p-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">{trackFlag(track)}</span>
+          <span className="truncate text-base font-bold">{display}</span>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          <span
+            className="rounded-sm px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-black"
+            style={{ background: catColor }}
+          >
+            {category}
+          </span>
+          <span className="rounded-sm border border-white/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/60">
+            {sessions.length} session{sessions.length === 1 ? "" : "s"}
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function Tag({ color, children }: { color: string; children: React.ReactNode }) {
+  return (
+    <span
+      className="rounded-sm px-1.5 py-0.5 text-[10px] font-black text-black"
+      style={{ background: color }}
+    >
+      {children}
+    </span>
   );
 }
