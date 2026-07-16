@@ -50,9 +50,14 @@ function _embedSelectSession() {
   // For the practice view we pick a Practice session regardless of `cat`,
   // so the "Race → Practice" link surfaces every uploaded practice.
   const match = allSessions.find((s) => {
-    if (s.season !== seasonN) return false;
+    if (Number(s.season) !== seasonN) return false;
     if ((s.track_name || "").toLowerCase() !== wanted) return false;
-    if (isPracticeView) return (s.category || "").toLowerCase() === "practice";
+    if (isPracticeView) {
+      const c = (s.category || "").toLowerCase();
+      const st = (s.session_type || "").toLowerCase();
+      return c === "practice" || c.startsWith("practice") ||
+        /^p[123]$/.test(st) || st.includes("practice") || st.includes("fp");
+    }
     return !wantedCat || (s.category || "").toLowerCase() === wantedCat;
   });
   if (match) {
@@ -73,11 +78,17 @@ function _embedRenderPracticePicker() {
   if (!section) return;
   const wanted = String(EMBED_TRACK || "").toLowerCase();
   const seasonN = Number(EMBED_SEASON || currentSeason);
+  const isPracticeLike = (s) => {
+    const c = (s.category || "").toLowerCase();
+    const st = (s.session_type || "").toLowerCase();
+    return c === "practice" || c.startsWith("practice") ||
+      /^p[123]$/.test(st) || st.includes("practice") || st.includes("fp");
+  };
   const list = allSessions
     .filter((s) =>
-      s.season === seasonN &&
+      Number(s.season) === seasonN &&
       (s.track_name || "").toLowerCase() === wanted &&
-      (s.category || "").toLowerCase() === "practice",
+      isPracticeLike(s),
     )
     .sort((a, b) => String(a.session_type || "").localeCompare(String(b.session_type || "")));
 
@@ -90,7 +101,8 @@ function _embedRenderPracticePicker() {
     if (body) body.prepend(picker); else section.prepend(picker);
   }
   if (list.length === 0) {
-    picker.innerHTML = '<div style="color:var(--secondary-text);font-size:0.9rem">No Practice sessions uploaded for this track yet. Upload a Practice_*.json to see the summary here.</div>';
+    const totalPract = allSessions.filter(isPracticeLike).length;
+    picker.innerHTML = `<div style="color:var(--secondary-text);font-size:0.9rem">No Practice sessions uploaded for this track yet (season ${seasonN}, track "${wanted}"). Total practice sessions across all tracks: ${totalPract}. Upload a Practice_*.json to see the summary here.</div>`;
     return;
   }
   const currentId = currentData && (currentData.id || currentData.created_at);
