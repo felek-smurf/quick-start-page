@@ -691,13 +691,20 @@ button:hover, .download-btn:hover {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: stretch;
 }
 .fuel-calc-item {
   background: var(--bg-3);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 12px 14px;
-  margin-bottom: 8px;
+  flex: 1 1 0;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
 }
 .fuel-calc-result {
   background: linear-gradient(135deg, rgba(225,6,0,0.14), rgba(225,6,0,0.04));
@@ -707,6 +714,10 @@ button:hover, .download-btn:hover {
   border-radius: 12px;
   font-weight: 700;
   font-family: var(--font-mono);
+  margin-top: auto;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
 }
 .fuel-calc-item label {
   display: block;
