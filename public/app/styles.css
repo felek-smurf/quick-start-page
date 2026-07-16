@@ -2502,7 +2502,7 @@ body.embed-mode .collapsible-section.active { display: block !important; }
 body.embed-mode .section-header { display: none; }
 
 /* Upload-only embed */
-html.embed-upload, body.embed-upload { background: transparent; }
+html.embed-upload, body.embed-upload { background: transparent; overflow: hidden; }
 body.embed-upload #topNav,
 body.embed-upload .compact-header,
 body.embed-upload .season-stats-host,
@@ -2533,17 +2533,18 @@ body.embed-upload .sidebar-toggle { display: none !important; }
 body.embed-upload {
   padding: 0;
   color: var(--text);
+  overflow: hidden;
 }
 body.embed-upload .sidebar-block-body {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
-  padding: 4px;
+  gap: 8px;
+  padding: 2px;
 }
 body.embed-upload .file-input-label {
   justify-content: center;
   width: 100%;
-  padding: 14px 20px;
+  padding: 10px 16px;
   background:
     linear-gradient(135deg, rgba(225,6,0,0.16), rgba(225,6,0,0.04));
   border: 1px dashed rgba(225,6,0,0.55);
