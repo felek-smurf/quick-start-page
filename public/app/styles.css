@@ -739,6 +739,8 @@ button:hover, .download-btn:hover {
   font-weight: 700;
   font-size: 1.05rem;
   letter-spacing: 0.02em;
+  margin-top: auto;
+  min-height: 48px;
   outline: none;
   transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
   -moz-appearance: textfield;
