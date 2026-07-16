@@ -112,6 +112,9 @@ export function trackSlug(name: string) {
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/+$/, "") + "/";
 
 export function trackMapUrl(name: string) {
+  return `${BASE}track-maps/${trackSlug(name)}.webp`;
+}
+export function trackMapFallbackUrl(name: string) {
   return `${BASE}track-maps/${trackSlug(name)}.png`;
 }
 export function appEmbedUrl(params: { season: number; track: string; view: string; cat?: string }) {
