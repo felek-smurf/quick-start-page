@@ -6,6 +6,7 @@ import {
   trackSlug,
   trackFlag,
   trackMapUrl,
+  trackMapFallbackUrl,
   titleCaseTrack,
   badgesFor,
   type Session,
@@ -107,6 +108,9 @@ function TrackPage() {
   }, [notes, seasonN, track]);
 
   const [imgOk, setImgOk] = useState(true);
+  const [imgSrc, setImgSrc] = useState<string>("");
+  const triedFallback = useMemo(() => ({ v: false }), [canonicalName]);
+  useEffect(() => { setImgSrc(trackMapUrl(canonicalName)); setImgOk(true); triedFallback.v = false; }, [canonicalName, triedFallback]);
 
   const orderedOptions = useMemo(() => {
     const byView = new Map(OPTIONS.map((o) => [o.view, o]));
@@ -162,12 +166,15 @@ function TrackPage() {
             />
           </div>
           <div className="overflow-hidden rounded-lg border border-white/10 bg-black/40">
-            {imgOk ? (
+          {imgOk ? (
               <img
-                src={trackMapUrl(canonicalName)}
+                src={imgSrc || trackMapUrl(canonicalName)}
                 alt={canonicalName}
                 className="h-full w-full object-contain p-4"
-                onError={() => setImgOk(false)}
+                onError={() => {
+                  if (!triedFallback.v) { triedFallback.v = true; setImgSrc(trackMapFallbackUrl(canonicalName)); }
+                  else setImgOk(false);
+                }}
               />
             ) : (
               <div className="flex h-full min-h-[240px] items-center justify-center text-6xl opacity-40">

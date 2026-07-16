@@ -10,6 +10,7 @@ import {
   seasonStats,
   trackFlag,
   trackMapUrl,
+  trackMapFallbackUrl,
   trackSlug,
   titleCaseTrack,
   badgesFor,
@@ -164,7 +165,9 @@ function TrackCard({ season, track, category, sessions }: { season: number; trac
     const b = badgesFor(s);
     Object.entries(b).forEach(([k, v]) => { if (v) badgeAgg[k] = true; });
   });
+  const [imgSrc, setImgSrc] = useState(trackMapUrl(track));
   const [imgOk, setImgOk] = useState(true);
+  const triedFallback = useMemo(() => ({ v: false }), [track]);
   const display = titleCaseTrack(track);
   const catColor = category === "Sprint" ? "#f59e0b" : category === "Practice" ? "#64748b" : "#ef4444";
   return (
@@ -177,12 +180,15 @@ function TrackCard({ season, track, category, sessions }: { season: number; trac
       <div className="relative aspect-[16/9] bg-black/40">
         {imgOk ? (
           <img
-            src={trackMapUrl(track)}
+            src={imgSrc}
             alt={display}
             loading="lazy"
             decoding="async"
             className="h-full w-full object-contain p-3"
-            onError={() => setImgOk(false)}
+            onError={() => {
+              if (!triedFallback.v) { triedFallback.v = true; setImgSrc(trackMapFallbackUrl(track)); }
+              else setImgOk(false);
+            }}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-4xl opacity-40">{trackFlag(track)}</div>
