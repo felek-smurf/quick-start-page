@@ -13,7 +13,9 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 // Usernames are stored as pseudo-emails since Supabase Auth requires email.
 export function usernameToEmail(username: string) {
-  return `${username.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, "")}@f1.local`;
+  const value = username.trim().toLowerCase();
+  if (value.includes("@")) return value;
+  return `${value.replace(/[^a-z0-9_.-]/g, "")}@f1.local`;
 }
 
 export function displayNameFromSession(s: Session | null): string {
