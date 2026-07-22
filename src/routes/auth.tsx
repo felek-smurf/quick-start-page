@@ -3,7 +3,16 @@ import { useEffect, useState } from "react";
 import { supabase, usernameToEmail, claimOrphanRows } from "@/lib/supabase";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "Sign in · F1 Telemetry" }] }),
+  head: () => ({
+    meta: [
+      { title: "Sign in · F1 Telemetry Analyzer" },
+      { name: "description", content: "Sign in to manage F1 telemetry uploads, race sessions, and season data." },
+      { property: "og:title", content: "Sign in · F1 Telemetry Analyzer" },
+      { property: "og:description", content: "Access your F1 telemetry uploads, race sessions, and season dashboard." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: AuthPage,
 });
 
@@ -29,6 +38,9 @@ function AuthPage() {
     setBusy(true);
     try {
       const email = usernameToEmail(username);
+      if (!email || !email.includes("@")) {
+        throw new Error("Enter a username or the exact email you created in Supabase.");
+      }
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) {
@@ -38,6 +50,11 @@ function AuthPage() {
             const { error: sErr } = await supabase.auth.signInWithPassword({ email, password });
             if (sErr) throw sErr;
           } else {
+            if (msg.includes("email signups") || msg.includes("provider")) {
+              throw new Error(
+                "Email/password signups are disabled in Supabase. Turn Authentication → Providers → Email ON, or create the user manually, then sign in with the exact email or username.",
+              );
+            }
             throw error;
           }
         } else if (!data.session) {
@@ -55,11 +72,11 @@ function AuthPage() {
           const msg = (error.message || "").toLowerCase();
           if (msg.includes("not confirmed")) {
             throw new Error(
-              "Email not confirmed. In Supabase → Authentication → Providers → Email, turn OFF 'Confirm email', or confirm this user in Authentication → Users.",
+              "Email not confirmed. In Supabase → Authentication → Users, open this user and confirm it, or turn OFF Authentication → Providers → Email → Confirm email.",
             );
           }
           if (msg.includes("invalid")) {
-            throw new Error("Wrong username or password. If you don't have an account yet, tap 'Sign up' below.");
+            throw new Error("Wrong username/email or password. If you created the account manually with an email, type that exact email; plain usernames sign in as username@f1.local.");
           }
           throw error;
         }
@@ -84,7 +101,7 @@ function AuthPage() {
           {mode === "signin" ? "Sign in to your account" : "Create an account"}
         </p>
 
-        <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-white/60">Username</label>
+        <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-white/60">Username or email</label>
         <input
           value={username}
           onChange={(e) => setUsername(e.target.value)}
@@ -100,7 +117,6 @@ function AuthPage() {
           onChange={(e) => setPassword(e.target.value)}
           autoComplete={mode === "signin" ? "current-password" : "new-password"}
           className="mb-4 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-sm outline-none focus:border-red-500"
-          placeholder="••••••"
         />
 
         {err && <div className="mb-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">{err}</div>}
