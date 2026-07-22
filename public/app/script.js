@@ -47,17 +47,23 @@ function _embedSelectSession() {
   const wantedCat = EMBED_CAT ? String(EMBED_CAT).toLowerCase() : null;
   const seasonN = Number(EMBED_SEASON || currentSeason);
   const isPracticeView = EMBED_VIEW === "practice";
-  // For the practice view we pick a Practice session regardless of `cat`,
-  // so the "Race → Practice" link surfaces every uploaded practice.
+  // For the practice view we pick a Practice or Sprint session regardless of
+  // `cat`, so the "Race → Practice" link surfaces every uploaded practice
+  // AND the sprint for the same weekend.
+  const isPracticeLikeSession = (s) => {
+    const c = (s.category || "").toLowerCase();
+    const st = (s.session_type || "").toLowerCase();
+    // Only Practice sessions and the (race) Sprint. Exclude Qualifying and Sprint Shootout/Qualifying.
+    return (
+      c === "practice" || c.startsWith("practice") ||
+      c === "sprint" ||
+      /^p[123]$/.test(st) || st.includes("practice") || st.includes("fp")
+    );
+  };
   const match = allSessions.find((s) => {
     if (Number(s.season) !== seasonN) return false;
     if ((s.track_name || "").toLowerCase() !== wanted) return false;
-    if (isPracticeView) {
-      const c = (s.category || "").toLowerCase();
-      const st = (s.session_type || "").toLowerCase();
-      return c === "practice" || c.startsWith("practice") ||
-        /^p[123]$/.test(st) || st.includes("practice") || st.includes("fp");
-    }
+    if (isPracticeView) return isPracticeLikeSession(s);
     return !wantedCat || (s.category || "").toLowerCase() === wantedCat;
   });
   if (match) {
@@ -72,7 +78,8 @@ function _embedSelectSession() {
 }
 
 // Render a session picker at the top of the practice section listing every
-// Practice session uploaded for this track so the user can view P1/P2/P3.
+// Practice (and Sprint) session uploaded for this track so the user can
+// switch between P1/P2/P3/Sprint.
 function _embedRenderPracticePicker() {
   const section = document.getElementById("section-practice");
   if (!section) return;
@@ -81,8 +88,21 @@ function _embedRenderPracticePicker() {
   const isPracticeLike = (s) => {
     const c = (s.category || "").toLowerCase();
     const st = (s.session_type || "").toLowerCase();
-    return c === "practice" || c.startsWith("practice") ||
-      /^p[123]$/.test(st) || st.includes("practice") || st.includes("fp");
+    return (
+      c === "practice" || c.startsWith("practice") ||
+      c === "sprint" ||
+      /^p[123]$/.test(st) || st.includes("practice") || st.includes("fp")
+    );
+  };
+  const orderKey = (s) => {
+    const c = (s.category || "").toLowerCase();
+    const st = (s.session_type || "").toLowerCase();
+    if (/^p1$/.test(st) || st.includes("practice 1") || st.includes("fp1")) return "1";
+    if (/^p2$/.test(st) || st.includes("practice 2") || st.includes("fp2")) return "2";
+    if (/^p3$/.test(st) || st.includes("practice 3") || st.includes("fp3")) return "3";
+    if (c === "sprint qualifying" || c === "sprint shootout") return "4";
+    if (c === "sprint") return "5";
+    return "9" + (s.session_type || "");
   };
   const list = allSessions
     .filter((s) =>
@@ -90,7 +110,7 @@ function _embedRenderPracticePicker() {
       (s.track_name || "").toLowerCase() === wanted &&
       isPracticeLike(s),
     )
-    .sort((a, b) => String(a.session_type || "").localeCompare(String(b.session_type || "")));
+    .sort((a, b) => orderKey(a).localeCompare(orderKey(b)));
 
   let picker = document.getElementById("embedPracticePicker");
   if (!picker) {
@@ -102,17 +122,27 @@ function _embedRenderPracticePicker() {
   }
   if (list.length === 0) {
     const totalPract = allSessions.filter(isPracticeLike).length;
-    picker.innerHTML = `<div style="color:var(--secondary-text);font-size:0.9rem">No Practice sessions uploaded for this track yet (season ${seasonN}, track "${wanted}"). Total practice sessions across all tracks: ${totalPract}. Upload a Practice_*.json to see the summary here.</div>`;
+    picker.innerHTML = `<div style="color:var(--secondary-text);font-size:0.9rem">No Practice or Sprint sessions uploaded for this track yet (season ${seasonN}, track "${wanted}"). Total practice/sprint sessions across all tracks: ${totalPract}. Upload a Practice_*.json or Sprint_*.json to see the summary here.</div>`;
     return;
   }
   const currentId = currentData && (currentData.id || currentData.created_at);
+  const labelFor = (s) => {
+    const st = s.session_type || "";
+    const c = (s.category || "").toLowerCase();
+    if (st) return st;
+    if (c === "sprint") return "Sprint";
+    if (c === "sprint qualifying" || c === "sprint shootout") return "Sprint Quali";
+    return "Practice";
+  };
   picker.innerHTML =
-    '<div style="width:100%;font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--secondary-text);margin-bottom:4px">Practice Sessions</div>' +
+    '<div style="width:100%;font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--secondary-text);margin-bottom:4px">Practice & Sprint Sessions</div>' +
     list.map((s) => {
       const id = s.id || s.created_at;
-      const label = s.session_type || "Practice";
+      const label = labelFor(s);
       const isActive = String(id) === String(currentId);
-      return `<button type="button" data-sid="${id}" style="padding:8px 14px;border-radius:8px;border:1px solid ${isActive ? "#ef4444" : "rgba(255,255,255,0.15)"};background:${isActive ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.03)"};color:#fff;font-weight:700;font-size:0.85rem;cursor:pointer">${label}</button>`;
+      const isSprint = (s.category || "").toLowerCase().startsWith("sprint");
+      const accent = isSprint ? "#f59e0b" : "#ef4444";
+      return `<button type="button" data-sid="${id}" style="padding:8px 14px;border-radius:8px;border:1px solid ${isActive ? accent : "rgba(255,255,255,0.15)"};background:${isActive ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.03)"};color:#fff;font-weight:700;font-size:0.85rem;cursor:pointer">${label}</button>`;
     }).join("");
   picker.querySelectorAll("button[data-sid]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1196,6 +1226,16 @@ async function saveSessions(sessions) {
     throw new Error("Database connection is still loading. Please try again in a moment.");
   }
 
+  // Attach the signed-in user so RLS accepts the insert.
+  let uid = null;
+  try {
+    const { data } = await db.auth.getUser();
+    uid = data?.user?.id || null;
+  } catch (e) { /* ignore */ }
+  if (!uid) {
+    throw new Error("You must be signed in to save sessions.");
+  }
+
   const dataToInsert = sessions.map((session) => ({
     driver_name: session.driver_name,
     track_name: session.track_name,
@@ -1210,17 +1250,22 @@ async function saveSessions(sessions) {
     stints: session.stints,
     results: session.results,
     race_story: session.race_story || null,
+    user_id: uid,
   }));
 
-  // Overwrite: delete any existing row matching driver+track+season+category, then insert
+  // Overwrite: delete any existing row matching driver+track+season+category (+ session_type for Practice/Quali) then insert
   for (const row of dataToInsert) {
     try {
-      await db.from("telemetry_sessions").delete().match({
+      const match = {
         driver_name: row.driver_name,
         track_name: row.track_name,
         season: row.season,
         category: row.category,
-      });
+      };
+      // For sessions with distinct session_type (P1/P2/P3, Q1/Q2/Q3), scope
+      // the overwrite so uploading FP2 doesn't wipe FP1 for the same weekend.
+      if (row.session_type) match.session_type = row.session_type;
+      await db.from("telemetry_sessions").delete().match(match);
     } catch (err) {
       console.warn("Pre-delete for overwrite failed (continuing):", err);
     }
@@ -4271,10 +4316,14 @@ async function saveDriverTeamsToDB(obj) {
     throw new Error("Database connection is still loading. Please try again in a moment.");
   }
 
+  const { data: userData } = await db.auth.getUser();
+  const uid = userData?.user?.id;
+  if (!uid) throw new Error("You must be signed in to save.");
   const rows = Object.entries(obj).map(([driver, team]) => ({
     season: currentSeason,
     driver_name: driver,
     team: team,
+    user_id: uid,
   }));
 
   // Upsert rows using season + driver_name as unique constraint
@@ -4378,9 +4427,12 @@ async function saveTrackNote(trackKey, notes) {
   }
   setNotesStatus("Saving…");
   try {
+    const { data: userData } = await client.auth.getUser();
+    const uid = userData?.user?.id;
+    if (!uid) { setNotesStatus("Sign in to save notes", true); return; }
     const { error } = await client
       .from("track_notes")
-      .upsert({ track_key: trackKey, notes, updated_at: new Date().toISOString() }, { onConflict: "track_key" });
+      .upsert({ track_key: trackKey, notes, updated_at: new Date().toISOString(), user_id: uid }, { onConflict: "track_key" });
     if (error) {
       console.error("track_notes save failed", error);
       setNotesStatus("Save failed: " + (error.message || "unknown"), true);
