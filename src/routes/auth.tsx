@@ -30,13 +30,39 @@ function AuthPage() {
     try {
       const email = usernameToEmail(username);
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
-        // Try immediate sign-in in case email confirmation is disabled.
-        await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) {
+          const msg = (error.message || "").toLowerCase();
+          if (msg.includes("already") || msg.includes("registered")) {
+            // Fall through: try to sign in with the same credentials.
+            const { error: sErr } = await supabase.auth.signInWithPassword({ email, password });
+            if (sErr) throw sErr;
+          } else {
+            throw error;
+          }
+        } else if (!data.session) {
+          // No session returned → email confirmation is ON. Try sign-in anyway.
+          const { error: sErr } = await supabase.auth.signInWithPassword({ email, password });
+          if (sErr) {
+            throw new Error(
+              "Account created but email confirmation is required. In Supabase → Authentication → Providers → Email, turn OFF 'Confirm email', then sign in.",
+            );
+          }
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        if (error) {
+          const msg = (error.message || "").toLowerCase();
+          if (msg.includes("not confirmed")) {
+            throw new Error(
+              "Email not confirmed. In Supabase → Authentication → Providers → Email, turn OFF 'Confirm email', or confirm this user in Authentication → Users.",
+            );
+          }
+          if (msg.includes("invalid")) {
+            throw new Error("Wrong username or password. If you don't have an account yet, tap 'Sign up' below.");
+          }
+          throw error;
+        }
       }
       // Attach any orphan legacy rows to this account (only affects the first user).
       await claimOrphanRows();
@@ -65,7 +91,6 @@ function AuthPage() {
           autoComplete="username"
           autoFocus
           className="mb-4 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-sm outline-none focus:border-red-500"
-          placeholder="felek"
         />
 
         <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-white/60">Password</label>
