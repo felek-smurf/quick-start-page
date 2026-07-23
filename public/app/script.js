@@ -90,7 +90,8 @@ function _embedRenderPracticePicker() {
     const st = (s.session_type || "").toLowerCase();
     return (
       c === "practice" || c.startsWith("practice") ||
-      c === "sprint" ||
+      c === "sprint" || c === "sprint qualifying" || c === "sprint shootout" ||
+      c === "race" ||
       /^p[123]$/.test(st) || st.includes("practice") || st.includes("fp")
     );
   };
@@ -129,9 +130,10 @@ function _embedRenderPracticePicker() {
   const labelFor = (s) => {
     const st = s.session_type || "";
     const c = (s.category || "").toLowerCase();
-    if (st) return st;
     if (c === "sprint") return "Sprint";
     if (c === "sprint qualifying" || c === "sprint shootout") return "Sprint Quali";
+    if (c === "race") return "Race";
+    if (st) return st;
     return "Practice";
   };
   picker.innerHTML =
@@ -1608,7 +1610,7 @@ function renderPracticeSection() {
 
   const isEligibleForReview =
     currentData &&
-    (currentData.category === "Practice" || currentData.category === "Sprint");
+    (currentData.category === "Practice" || currentData.category === "Sprint" || currentData.category === "Race");
 
   if (!isEligibleForReview) {
     practiceStintSection.style.display = "none";
