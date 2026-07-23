@@ -90,7 +90,8 @@ function _embedRenderPracticePicker() {
     const st = (s.session_type || "").toLowerCase();
     return (
       c === "practice" || c.startsWith("practice") ||
-      c === "sprint" ||
+      c === "sprint" || c === "sprint qualifying" || c === "sprint shootout" ||
+      c === "race" ||
       /^p[123]$/.test(st) || st.includes("practice") || st.includes("fp")
     );
   };
