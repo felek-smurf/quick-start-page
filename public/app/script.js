@@ -1608,7 +1608,7 @@ function renderPracticeSection() {
 
   const isEligibleForReview =
     currentData &&
-    (currentData.category === "Practice" || currentData.category === "Sprint");
+    (currentData.category === "Practice" || currentData.category === "Sprint" || currentData.category === "Race");
 
   if (!isEligibleForReview) {
     practiceStintSection.style.display = "none";
