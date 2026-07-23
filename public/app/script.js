@@ -133,7 +133,6 @@ function _embedRenderPracticePicker() {
     const st = s.session_type || "";
     const c = (s.category || "").toLowerCase();
     if (c === "sprint") return "Sprint";
-    if (c === "sprint qualifying" || c === "sprint shootout") return "Sprint Quali";
     if (c === "race") return "Race";
     if (st) return st;
     return "Practice";
