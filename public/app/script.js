@@ -88,9 +88,11 @@ function _embedRenderPracticePicker() {
   const isPracticeLike = (s) => {
     const c = (s.category || "").toLowerCase();
     const st = (s.session_type || "").toLowerCase();
+    // Only Practice, Sprint (race), and Race. Explicitly exclude Sprint Quali/Shootout.
+    if (c === "sprint qualifying" || c === "sprint shootout") return false;
     return (
       c === "practice" || c.startsWith("practice") ||
-      c === "sprint" || c === "sprint qualifying" || c === "sprint shootout" ||
+      c === "sprint" ||
       c === "race" ||
       /^p[123]$/.test(st) || st.includes("practice") || st.includes("fp")
     );
@@ -101,8 +103,8 @@ function _embedRenderPracticePicker() {
     if (/^p1$/.test(st) || st.includes("practice 1") || st.includes("fp1")) return "1";
     if (/^p2$/.test(st) || st.includes("practice 2") || st.includes("fp2")) return "2";
     if (/^p3$/.test(st) || st.includes("practice 3") || st.includes("fp3")) return "3";
-    if (c === "sprint qualifying" || c === "sprint shootout") return "4";
     if (c === "sprint") return "5";
+    if (c === "race") return "6";
     return "9" + (s.session_type || "");
   };
   const list = allSessions
@@ -131,7 +133,6 @@ function _embedRenderPracticePicker() {
     const st = s.session_type || "";
     const c = (s.category || "").toLowerCase();
     if (c === "sprint") return "Sprint";
-    if (c === "sprint qualifying" || c === "sprint shootout") return "Sprint Quali";
     if (c === "race") return "Race";
     if (st) return st;
     return "Practice";
